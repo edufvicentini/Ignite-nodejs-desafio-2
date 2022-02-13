@@ -15,7 +15,7 @@ function checksExistsUserAccount(request, response, next) {
   const user = users.find((user) => user.username === username)
 
   if (!user)
-    return response.status(404).json({ error: "User do not exists!"})
+    return response.status(404).json({ error: "User not found!"})
   
   request.user = user;
 
@@ -25,28 +25,36 @@ function checksExistsUserAccount(request, response, next) {
 function checksCreateTodosUserAvailability(request, response, next) {
   const { user } = request;
 
-  if ((users.length > 10) && (user.pro == false))
-    return response.status(404).json({ error: "Please assign to the Pro Package if you want to continue"});
+  if ((user.todos.length > 9) && (user.pro == false))
+    return response.status(403).json({ error: "Please assign to the Pro Package if you want to create more than 10 todos."});
 
   return next();
 }
 
 function checksTodoExists(request, response, next) {
-  const { user } = request;
-  const { id } = request.param;
+  const { username } = request.headers;
+  const { id } = request.params;
 
+  if (!validate(id))
+    return response.status(400).json({ error: "Informed ID is not a valid UUID!"})   
+
+  const user = users.find((user) => user.username === username)
+  if (!user)
+    return response.status(404).json({ error: "User not found!"})
+    
   const todo = user.todos.find((todo) => todo.id === id)
 
   if (!todo)
-    return response.status(404).json({ error: "Todo do not exists!"}) 
+    return response.status(404).json({ error: "Todo not found!"}) 
 
   request.todo = todo;
+  request.user = user;
 
   return next();
 }
 
 function findUserById(request, response, next) {
-  const { id } = request.param;
+  const { id } = request.params;
 
   const user = users.find((user) => user.id === id)
 
@@ -150,7 +158,7 @@ app.delete('/todos/:id', checksExistsUserAccount, checksTodoExists, (request, re
 
   user.todos.splice(todoIndex, 1);
 
-  return response.status(204).send();
+  return response.status(204).send("Todo deleted succefully");
 });
 
 module.exports = {
